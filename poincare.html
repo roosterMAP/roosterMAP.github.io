@@ -11,6 +11,12 @@
 	<!-- Theme CSS -->  
 	<link id="theme-style" rel="stylesheet" href="theme.css">
 
+	<!-- Math Syntax --> 
+	<script type="text/x-mathjax-config">MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});</script>
+	<script type="text/javascript" async
+		src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML" async>
+	</script>
+
 </head> 
 
 <body>
@@ -28,13 +34,13 @@
 				<div class="profile-section pt-3 pt-lg-0">
 					<img class="profile-image mb-3 rounded-circle mx-auto" src="assets/images/profile.png" alt="image" >			
 					
-					<div class="bio mb-3">Hi, my name is Timothee Yeramian. I've been working in Games for about 10 years. Here is where I publish posts about my various personal projects and research.</div>
+					<div class="bio mb-3">Hi, my name is Timothee Yeramian. I've been working in the GamesIndustry for about 10 years. Here is where I publish posts about my various personal projects and research. </div>
 					<hr>
 				</div>
 				
 				<ul class="navbar-nav flex-column text-left">
-					<li class="nav-item active">
-						<a class="nav-link" href="index.html">Pages Home<span class="sr-only">(current)</span></a>
+					<li class="nav-item">
+						<a class="nav-link" href="index.html">Pages Home</a>
 					</li>
 					<li class="nav-item">
 						<a class="nav-link" href="https://www.artstation.com/roostermap">ArtStation</a>
@@ -51,12 +57,137 @@
 	</header>
 	
 	<div class="main-wrapper">
-	    <article class="blog-post px-3 py-5 p-md-5">
+		<section class="cta-section theme-bg-light py-5">
+			<div class="container text-left">
+				<h2 class="heading">Higher Dimensional Poincaré Embeddings</h2>
+				<div class="meta mb-2"><span class="date">Published on 12/18/2020</div>
+			</div>
+		</section>
+
+	    <article class="blog-post px-3 py-5 p-md-6">
 		    <div class="container">
-			    <header class="blog-post-header">
-				    <h2 class="title mb-2">Higher Dimensional Poincaré Embedings</h2>
-				    <div class="meta mb-3"><span class="date">Published on 12/18/2020</div>
-			    </header>
+			    <div class="blog-post-body">
+					<p>
+						A few months ago, I saw a Devlog from the YouTuber/IndieDev CodeParade who was showing off a demo of his newest game "Hyperbolica": a first-person game that took place on the hyperbolic plane. I was immediately blow away by how disorienting and mind-bending navigating the space looked. Inspired by what he had shown, I resolved to get a better understanding of the math behind the rendering. It was an exciting journey that took me through many branches of mathematics that I had never looked at like Tensors, Complex Analysis, Topology, and Manifolds. This post specifically goes over, how to map points from regular 3D Euclidean space to Hyperbolic space using the Poincare Ball model.
+					</p>
+
+					<h3 class="mt-5 mb-3">Hyperbolic Geometry</h3>
+					<figure class="blog-banner">
+						<img class="img-fluid" src="https://upload.wikimedia.org/wikipedia/commons/8/89/Hyperbolic_triangle.svg" width="300">
+						<figcaption class="mt-2 text-left image-caption">Image Credit: <a href="https://en.wikipedia.org/" target="_blank">Wikipedia</a></figcaption>
+					</figure>
+					<p>
+						So, what is Hyperbolic geometry?  Hyperbolic geometry is a non-Euclidean geometry that doesn’t follow Euclid’s parallel postulate which states that through a point not on a given line there is exactly one other line parallel to the given line. In hyperbolic space, there are at least two other such lines. This means that all straight lines eventually diverge from one-another. This is due to the negative curvature inherent to hyperbolic geometry. There are three type of geometry and they are defined be their intrinsic curvature. Euclidean has zero curvature, Elliptic has positive, and Hyperbolic has negative. It is this differing property that leads the three geometries to disagree on the parallel postulate. The negative curvature of hyperbolic geometry leads to many mind-bending effects like: the circumference  of an expanding circle grows exponentially, the sum of the angles of a triangle is less than 180 degrees, the area of triangles can be measured by only using the sum of its angles, the upper bound for the area of a triangle is pi… freaky shit!
+					</p>
+					<p>
+						Here’s a more intuitive way to think about it: Imagine a checkerboard in Euclidean space where each corner touches exactly four square tiles. Now let’s build the same thing in hyperbolic space. Depending on how curved your hyperbolic plane is, you can have five or more square tiles per corner. Just to be clear, each tile is a square: there are four side each of the same length, and all angles are equal. And yet, due of the negative curvature of the geometry, you can still have 5 or 6 or even 7 square tiles sharing the same corner! This leads to the hyperbolic plane seeming to have more “space” than regular Euclidean geometry. It’s like “space” is unfurling itself before you as you traverse the plane.
+					</p>
+					<p>
+						So how do we draw exciting hyperbolic geometry on a boring Euclidean canvas? There are many different models for displaying hyperbolic geometry, each with their own upsides and downsides, in this post, we will focus on the Poincaré model. But before diving into that we need to set a few things up first.
+					</p>
+
+					<h3 class="mt-5 mb-3">Two-Sheet Hyperboloid</h3>
+					<figure class="blog-banner">
+						<img class="img-fluid" src="https://upload.wikimedia.org/wikipedia/commons/f/f2/Hyperboloid2.png" width="300">
+						<figcaption class="mt-2 text-left image-caption">Image Credit: <a href="https://en.wikipedia.org/" target="_blank">Wikipedia</a></figcaption>
+					</figure>
+					<p>
+						A hyperboloid is a generalization of a hyperbola in two dimensions. It’s basically a hyperbola spun around its principal axis forming two 2D surfaces embedded in 3D space. The first thing we must do is map Euclidean space onto one of the sheets of the hyperboloid. This is done by parametrizing the hyperboloid. By doing this, we are saying that for every point $(u,v)$ on the 2D Euclidean plane, there is a point $(x,y,z)$ on the surface of the hyperboloid. A simple google search will get you the parametrization you need to do this. At this point, you may think you’re off the hook, and everything is fine and dandy. But wait! All we can do is map a 2D point on the plane to a 3D point on the surface of the hyperboloid. That’s not very exciting. We want to map fully 3-dimensional objects to this hyperboloid, damn it!
+					</p>
+					<p>
+						Fortunately, this can be achieved by raising the dimension of the hyperboloid. Sadly, this means we’re going to have to do the parametrization by hand. Google can't save you from math this time!
+					</p>
+					<p>
+						To parameterize, we will be heavily relying on the following hyperbolic trig identity:
+						$${cosh^2(x) - sinh^2(x) = 1}$$
+
+						Since we want to map 3-dimensional Euclidean space, we must use a 4-dimensional hyperboloid.
+						$${a^2 + b^2 + c^2 - d^2 = -1}$$
+						$${t^2 - c^2 = 1 \qquad t^2 = d^2 - a^2 - b^2}$$
+						$${t^2 - c^2 = 1 \qquad s^2 - a^2 = t^2 \qquad s^2 = d^2 - b^2}$$
+
+						Solve for c:
+						$${t^2 - c^2 = 1}$$
+						$${c = sinh(v) \qquad t = cosh(v)}$$
+
+						Solve for a:
+						$${s^2 - a^2 = t^2}$$
+						$${(s/t)^2 - (a/t)^2 = 1}$$
+						$${s/t = cosh(u) \qquad a/t = sinh(u)}$$
+						$${a = tsinh(u) \qquad s = tcosh(u)}$$
+
+						Solve for b and d:
+						$${s^2 = d^2 - b^2}$$
+						$${(d/s)^2 - (b/s)^2 = 1}$$
+						$${d/s = cosh(w) \qquad b/s = sinh(w)}$$
+						$${d = scosh(w) \qquad b = ssinh(w)}$$
+
+						Solve fo a, b, c, and d and get rid of s and t:
+						$${c = sinh(v)}$$
+						$${a = tsinh(u) = cosh(v)sinh(u)}$$
+						$${b = ssinh(w) = tcosh(u)sinh(w) = cosh(v)cosh(u)sinh(w)}$$
+						$${d = scosh(w) = tcosh(u)cosh(w) = cosh(v)cosh(u)cosh(w)}$$
+
+						And that’s it! Now we can easily map a set of 3D points of to the surface of hyperboloid. Don’t worry too much about the fourth term, for the purpose of mapping the vertices of a 3d model to the surface of the hyperboloid you can drop it entirely.
+					</p>
+
+					<h3 class="mt-5 mb-3">Poincaré Ball Model</h3>
+					<figure class="blog-banner">
+						<img class="img-fluid" src="https://upload.wikimedia.org/wikipedia/commons/4/4c/Poincare_disc_hyperbolic_parallel_lines.svg" width="300">
+						<figcaption class="mt-2 text-left image-caption">Image Credit: <a href="https://en.wikipedia.org/" target="_blank">Wikipedia</a></figcaption>
+					</figure>
+					<p>
+						The Poincaré Ball Model is a model of n-dimensional hyperbolic geometry in which all points in any geometry are embedded in an n-dimensional sphere. In 2D it’s in a circle, in which case it called the Poincaré Disk Model. This model is basically a stereographic projection of the Hyperboloid from earlier. There are many other models, each with their own upsides and downsides. We are using Poincaré because its conformal, meaning it preserves angles of embedded geometries. However, it is neither isometric (distance preserving), area preserving, and linearity preserving. In fact, straight lines consist of all circular arcs contained within the disk/ball and are orthogonal to the boundary of the disk/ball (including diameters of the disk). Because of curvature of the geometry and how warped the Poincaré space is due to the projection, the shortest path between two points is a curve. In this context, these lines are called geodesics.
+					</p>
+
+					<p>
+						The way we project the hyperboloid into the Poincaré Ball/Disk is via stereographic projection. Simply put, stereographic projection is the mapping of a curved body onto a flat plane. It has many applications from complex analysis, cartography, geology, to photography.
+					</p>
+					<figure class="blog-banner">
+						<img class="img-fluid" src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Stereoprojzero.svg/1024px-Stereoprojzero.svg.png" width="300">
+						<figcaption class="mt-2 text-left image-caption">Image Credit: <a href="https://en.wikipedia.org/" target="_blank">Wikipedia</a></figcaption>
+					</figure>
+					<p>
+						In its simplest form, it is used to project the surface of a sphere onto a plane. This is done by drawing a line from a point N on north pole of the sphere to any another point P on that sphere. For any point P on the sphere, there is a unique line through N and P, and this line intersects the plane at exactly one point. This mapping of unique points on the sphere to unique points on the plane defines the stereographic projection of the sphere onto the plane. The image above illustrates this as the cross section of the stereographic projection of the unit sphere from the north pole onto the plane z = 0.
+					</p>
+
+					<figure class="blog-banner">
+						<img class="img-fluid" src="https://upload.wikimedia.org/wikipedia/commons/1/1f/HyperboloidProjection.png">
+						<figcaption class="mt-2 text-left image-caption">Image Credit: <a href="https://en.wikipedia.org/" target="_blank">Wikipedia</a></figcaption>
+					</figure>
+					<p>
+						This is pretty much what we are doing except with one sheet of the hyperboloid. In the image above a 2D hyperboloid embedded in 3D space can be represented as the equation $t^2 = x_1^2 + x_2^2 + 1$ for $t > 1$. It can be used to construct a Poincaré disk model as a projection viewed from $(t=-1,x1=0,x2=0)$, projecting the upper half hyperboloid onto the unit disk at $t=0$. The red geodesic in the Poincaré disk model projects to the brown geodesic on the green hyperboloid. The generalization of this projection to n-dimensions is quite simple:
+
+						$$y_i = x_i / ( 1 + t )$$
+						For cartesian coordinates $(x_1,...,x_n,t)$ on the n-dimensional hyperboloid and $(y_1,...,y_n)$ on the Poincaré model.
+					</p>
+
+					<p>
+						And that’s it! At this point we can easily map points from 3D Euclidean space to the Poincaré Ball model also in 3D Euclidean space. This makes rendering stuff on a GPU using regular rasterized graphics quite easy.
+						Below is a code snippet of everything we've covered:
+					</p>
+					<pre>
+						<code>
+	def MapToPoincareModel( p )
+		#map to fwd hyperboloid sheet
+		x = math.sinh( p[0] ) * math.cosh( p[2] )
+		y = math.sinh( p[2] )
+		z = math.sinh( p[1] ) * math.cosh( p[0] ) * math.cosh( p[2] )
+		w = math.cosh( p[1] ) * math.cosh( p[0] ) * math.cosh( p[2] )
+
+		#map to poincare disk model
+		try:
+			x = p[0] / ( 1.0 + p[3] )
+			y = p[1] / ( 1.0 + p[3] )
+			z = p[2] / ( 1.0 + p[3] )
+			w = p[3] / ( 1.0 + p[3] )
+			return ( x, y, z, w )
+		except ZeroDivisionError:
+			return ( 0.0, 0.0, 0.0, 0.0 )
+						</code>
+					</pre>
+
+			    </div>
 				    
 			    <nav class="blog-nav nav nav-justified my-5">
 				  <a class="nav-link-prev nav-item nav-link rounded-left" href="first_post.html">Previous</a>
