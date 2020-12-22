@@ -162,6 +162,11 @@
 						For cartesian coordinates $(x_1,...,x_n,t)$ on the n-dimensional hyperboloid and $(y_1,...,y_n)$ on the Poincaré model.
 					</p>
 
+					<div class="container text-center py-4">
+						<canvas width = "512" height = "350" id = "webglCanvas"></canvas>
+						<div class="meta mb-2"><span class="date">The GL view above illustrates the entire transformation of the 2D Euclidean plane, onto the embedded Hyperboloid, to the Poincaré Disk, and back again.</div>
+					</div>
+
 					<p>
 						And that’s it! At this point we can easily map points from 3D Euclidean space to the Poincaré Ball model also in 3D Euclidean space. This makes rendering stuff on a GPU using regular rasterized graphics quite easy.
 						Below is a code snippet of everything we've covered:
@@ -186,6 +191,141 @@
 			return ( 0.0, 0.0, 0.0, 0.0 )
 						</code>
 					</pre>
+
+					<script>
+						// Create an OpenGL context
+						var canvas = document.getElementById( 'webglCanvas' );
+						var gl = canvas.getContext( 'webgl' );
+
+						// Create a new buffer object
+						var vertex_buffer = gl.createBuffer();
+						gl.bindBuffer( gl.ARRAY_BUFFER, vertex_buffer );
+						var vertices = [];
+						var n = 30;
+						for ( i = 0; i < n + 1; i++ ) {
+							for ( j = 0; j < n + 1; j++ ) {
+								vertices.push( 1.0 / n * i - 0.5 );
+								vertices.push( 0.0 );
+								vertices.push( 1.0 / n * j - 0.5 );
+							}
+						}
+						gl.bufferData( gl.ARRAY_BUFFER, new Float32Array( vertices ), gl.STATIC_DRAW );
+
+						//
+						//  Build shaders
+						//
+
+						// Vertex shader source code
+						var vertCode =
+							'attribute vec3 verts;' + 
+							'uniform mat4 matOrient;' +
+							'uniform float time;' +
+							'float PI = 3.1415926535;' +
+
+							'float sinh( float x ) {' +
+							'	return ( exp( x ) - exp( -x ) ) * 0.5;' +
+							'}' +
+
+							'float cosh( float x ) {' +
+							'	return ( exp( x ) + exp( -x ) ) * 0.5;' +
+							'}' +
+
+							'void main(void) {' +
+							'	vec3 v = vec3( 0.0, 0.0, 0.0 );' +
+							'	float t = sin( time * 0.001 * PI / 2.0 );' +
+							'	float s = cos( time * 0.001 * PI / 2.0 );' +
+
+							'	float x_h = sinh( verts.x ) * cosh( verts.z ); ' +
+							'	float y_h = sinh( verts.z ); ' +
+							'	float z_h = cosh( verts.x ) * cosh( verts.z ); ' +
+							'	vec3 v_h = vec3( x_h, z_h * 2.0 - 1.5, y_h );' +
+
+							'	float x_pc = sinh( verts.x * 6.0 ) * cosh( verts.z * 6.0 ); ' +
+							'	float y_pc = sinh( verts.z * 6.0 ); ' +
+							'	float z_pc = cosh( verts.x * 6.0 ) * cosh( verts.z * 6.0 ); ' +
+							'	vec3 v_pc = vec3( x_pc / ( 1.0 + z_pc ) * 0.6, 0.0, y_pc / ( 1.0 + z_pc ) * 0.6 );' +
+
+							'	if ( t > 0.0 && s > 0.0 ) {' +
+							'		vec3 offset = v_h - verts;' +
+							'		v = verts + offset * t;' +
+							'	} else if ( t > 0.0 && s < 0.0 ) {' +
+							'		vec3 offset = v_h - v_pc;' +
+							'		v = v_h + offset * s;' +
+							'	} else if ( t < 0.0 && s < 0.0 ) {' +
+							'		vec3 offset = v_h - v_pc;' +
+							'		v = v_h + offset * s;' +
+							'	} else {' +
+							'		vec3 offset = v_h - verts;' +
+							'		v = verts + offset * -t;' +
+							'	}' +
+
+							'	gl_Position = matOrient * vec4( v.x, v.y, v.z, 1.0 );' +
+							'	gl_PointSize  = 2.0;' +
+							'}';
+						var vertShader = gl.createShader( gl.VERTEX_SHADER );
+						gl.shaderSource( vertShader, vertCode );
+						gl.compileShader( vertShader );
+						console.log( gl.getShaderInfoLog( vertShader ) );
+
+						// Fragment shader source code
+						var fragCode =
+							'void main( void ) {' +
+							'	gl_FragColor = vec4( 0.0, 0.0, 0.0, 1.0 );' +
+							'}';
+						var fragShader = gl.createShader( gl.FRAGMENT_SHADER );
+						gl.shaderSource( fragShader, fragCode );
+						gl.compileShader( fragShader );
+						console.log( gl.getShaderInfoLog( fragShader ) );
+
+						// Create a shader program object to store combined shader program
+						var shaderProgram = gl.createProgram();
+						gl.attachShader( shaderProgram, vertShader ); 
+						gl.attachShader( shaderProgram, fragShader );
+						gl.linkProgram( shaderProgram );
+
+						/*
+						====================================
+						RenderFrame
+						====================================
+						*/
+						var RenderFrame = function( time ) {
+							// remember OpenGL is column major
+							var matOrient = [
+								1.03509273658, 0.0, -0.563915025756, -0.563802254028,
+								0.0, 2.14450692051, -0.605178219926, -0.605057196384,
+								-1.0381018961, 0.0, -0.562280397904, -0.562167953069,
+								1.62755534349e-16, -1.25345661734, 1.81300130653, 1.81463854255
+							];
+
+							var uniformTime = gl.getUniformLocation( shaderProgram, "time" );
+							gl.uniform1f( uniformTime, time * 0.3 );
+
+							// Clear the canvas
+							gl.clearColor( 1.0, 1.0, 1.0, 1.0 );
+							gl.enable( gl.DEPTH_TEST ); 
+							gl.clear( gl.COLOR_BUFFER_BIT );
+							gl.viewport( 0, 0, canvas.width, canvas.height );
+
+							// Use the combined shader program object
+							gl.useProgram( shaderProgram );
+
+							var uniformMatrixOrient = gl.getUniformLocation( shaderProgram, "matOrient" );
+							gl.uniformMatrix4fv( uniformMatrixOrient, false, matOrient );
+
+							// Bind vertex buffer object
+							gl.bindBuffer( gl.ARRAY_BUFFER, vertex_buffer );
+							var coord = gl.getAttribLocation( shaderProgram, "verts" );
+							gl.vertexAttribPointer( coord, 3, gl.FLOAT, false, 0, 0 );
+							gl.enableVertexAttribArray( coord );
+
+							// Draw the triangle
+							gl.drawArrays( gl.POINTS, 0, 31 * 31 );
+
+							window.requestAnimationFrame( RenderFrame );
+						}
+						RenderFrame( 0 );
+					</script>
+
 
 			    </div>
 				    
